@@ -55,7 +55,7 @@ int main(){
 						}
 						else if(pid == 0){   //P7
 							printf("Sou o P7, PID = %d, PPID = %d\n", getpid(), getppid());
-
+							exit(1);
 						}
 						else{
 							wait(&status);
