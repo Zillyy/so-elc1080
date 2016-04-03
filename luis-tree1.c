@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <time.h>
 
 int main(){
+	clock_t t_ini, t_fim;
 	pid_t pid;
 	int status;
 
 	//---------------------LADO ESQUERDO DA ARVORE-------------------
+	t_ini = clock();
 	pid = fork();
 
 	if(pid == -1){
@@ -86,6 +89,8 @@ int main(){
 		}
 		else{		//P1
 			wait(&status); //espera por P3
+			t_fim = clock();
+			printf("Tempo de execucao: %f segundos\n",((float)(t_fim - t_ini)/CLOCKS_PER_SEC));
 			exit(1);
 		}
 	}
