@@ -16,13 +16,13 @@ typedef struct {
 void *SearchThread(void *args){
 	param_thread *param = args;
 	int i;
-	for(i = param->init_pos; i < param->final_pos; i++){
+	for(i = param->init_pos; i < param->final_pos + 1; i++){
 		if(param->haystack[i] == param->needle){
-			printf("Thread achou o numero %d\n", param->needle);
+			printf("Thread %d encontrou o valor %d\n", param->thread_id, param->needle);
 			return;
 		}		
 	}
-	printf("Thread nao achou o numero %d\n", param->needle);
+	printf("Thread %d: 0\n", param->thread_id);
 }
 
 int *InitArray(){
@@ -37,32 +37,46 @@ int *InitArray(){
 int main(int argc, char *argv[]){
 	clock_t t_ini, t_fim;
 	int i, rc;
-	pthread_t threads[5];
+	pthread_t threads[atoi(argv[2])];
+	int *haystack = InitArray();
 
-	param_thread *param = malloc(sizeof(param_thread));
-	param->needle = 10000;
-	param->haystack = InitArray();
-	param->init_pos = 0;
-	param->final_pos = 100000;
+	param_thread *param = malloc(sizeof(param_thread) * atoi(argv[2]));
+
+	int incr_value = MAX / atoi(argv[2]);
+	int init = 0;
+	int final = incr_value - 1;
+
+	//Cria parametros para argv[2] threads de acordo com o argumento [2] passado
+	for(i = 0; i < atoi(argv[2]); i++){
+		param[i].thread_id = i;
+		param[i].needle = atoi(argv[1]);
+		param[i].haystack = haystack;
+		param[i].init_pos = init;
+		param[i].final_pos = final;
+
+		init += incr_value;
+		final += incr_value;  
+	}
 	
 	t_ini = clock();
-	
-	
-	for(i = 0; i < 5; i++){
-		param->thread_id = i;
-		rc = pthread_create(&threads[i], NULL, SearchThread, (void *)&param);                            
+		
+	for(i = 0; i < atoi(argv[2]); i++){
+		rc = pthread_create(&threads[i], NULL, SearchThread, (void *)&param[i]);                            
    		if (rc){                          
        		printf("ERROR; return code from pthread_create() is %d\n", rc);                            
         	exit(-1);                          
     	}
-    	
-	}
-	for(i = 0; i < 5; i++){
-		pthread_join(threads[param->thread_id], NULL);   
 	}
 
 	t_fim = clock();
-	printf("Tempo de execucao: %f segundos\n",((float)(t_fim - t_ini)/CLOCKS_PER_SEC));
-	free(param->haystack);	
+	printf("Tempo de criacao de threads: %f segundos\n",((float)(t_fim - t_ini)/CLOCKS_PER_SEC));
+
+	for(i = 0; i < atoi(argv[2]); i++){
+		pthread_join(threads[i], NULL);   
+	}
+
+	
+	free(haystack);
+	free(param);
 	return 0;
 }
