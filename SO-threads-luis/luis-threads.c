@@ -13,6 +13,7 @@ typedef struct {
 	int thread_id;
 } param_thread;
 
+//Funcao de busca que as threads rodam
 void *SearchThread(void *args){
 	param_thread *param = args;
 	int i;
@@ -36,20 +37,35 @@ int *InitArray(){
 }
 
 int main(int argc, char *argv[]){
+	//Verificacoes de parametros 
+	if(argc != 3){
+		printf("Uso: %s (numero procurado) (numero de threads) > (arquivo de saida) \n", argv[0]);
+		exit(-1);
+	}
+
+	if(atoi(argv[1]) < 1 || atoi(argv[1]) > 1000000){
+		printf("O numero procurado deve estar entre 1 e 1000000!\n");
+		exit(-1);
+	}
+
+	//Declaracao de variaveis e inicio do clock de tempo de execucao total
 	clock_t t_ini_create, t_fim_create, t_ini_join, t_fim_join, t_ini_total, t_fim_total;
 	t_ini_total = clock();
+	int num_threads = atoi(argv[2]);
+	pthread_t threads[num_threads];
 	int i, rc;
-	pthread_t threads[atoi(argv[2])];
 	int *haystack = InitArray();
 
-	param_thread *param = malloc(sizeof(param_thread) * atoi(argv[2]));
+	//Estrutura que auxilia a thread
+	param_thread *param = malloc(sizeof(param_thread) * num_threads);
 
-	int incr_value = MAX / atoi(argv[2]);
+	//Variaveis utilizadas para preencher a estrutura que auxilia a thread
+	int incr_value = MAX / num_threads;
 	int init = 0;
 	int final = incr_value - 1;
 
-	//Cria parametros para argv[2] threads de acordo com o argumento [2] passado
-	for(i = 0; i < atoi(argv[2]); i++){
+	//Preenche estrutura de auxilio a thread
+	for(i = 0; i < num_threads; i++){
 		param[i].thread_id = i;
 		param[i].needle = atoi(argv[1]);
 		param[i].haystack = haystack;
@@ -62,7 +78,7 @@ int main(int argc, char *argv[]){
 	
 	//Loop de criação de threads
 	t_ini_create = clock();
-	for(i = 0; i < atoi(argv[2]); i++){
+	for(i = 0; i < num_threads; i++){
 		rc = pthread_create(&threads[i], NULL, SearchThread, (void *)&param[i]);                            
    		if (rc){                          
        		printf("ERRO! Codigo de retorno de pthread_create() eh %d\n", rc);                            
@@ -74,7 +90,7 @@ int main(int argc, char *argv[]){
 
 	//Loop de join de threads
 	t_ini_join = clock();
-	for(i = 0; i < atoi(argv[2]); i++){
+	for(i = 0; i < num_threads; i++){
 		pthread_join(threads[i], NULL);   
 	}
 	t_fim_join = clock();

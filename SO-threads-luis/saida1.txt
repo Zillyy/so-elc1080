@@ -1,0 +1,4 @@
+Tempo de criacao de threads: 0.000059 segundos
+Thread 0 encontrou o valor 830751
+Tempo de join de threads: 0.006420 segundos
+Tempo total de execucao: 0.019023 segundos
