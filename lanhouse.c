@@ -3,18 +3,17 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
-#include <time.h>
 #define NUM_PC 3
 #define LIVRE 0
 #define EM_USO 1
 
-//Criacao dos semaforos
-sem_t mutex_pcs[3];
+//Criacao do semaforo
+sem_t sem_pcs;
 sem_t mutex_lan;
 
 //Área compartilhada
 typedef struct{
-	int pcs[3];
+	int pcs[NUM_PC];
 	int fila_de_espera;
 } lanhouse;
 lanhouse lan; 
@@ -31,41 +30,40 @@ int verifica_pcs(){
 			return i;
 		}
 	}
-	return -1;
 }
 
 void *Lanhouse(void *arg){
 	param_cliente *cliente = arg;
 
 	printf("Cliente [%d] chegando\n", cliente->cliente_id);
-	if(lan.fila_de_espera >= 15){
+	//sem_wait(&mutex_lan);
+	printf("Sala de espera com %d pessoa(s)\n", lan.fila_de_espera);
+	lan.fila_de_espera++;
+	//sem_post(&mutex_lan);
+	
+	if(lan.fila_de_espera > 15){
+		//sem_wait(&mutex_lan);
+		lan.fila_de_espera--;
 		printf("Cliente [%d] saindo: Sala de espera lotada\n", cliente->cliente_id);
+		//sem_post(&mutex_lan);
 		return NULL;
 	} else{
+		sem_wait(&sem_pcs);
 		//sem_wait(&mutex_lan);
-		
-
-		int i = verifica_pcs();
-		//sem_post(&mutex_lan);
-		if(i == -1){
-			lan.fila_de_espera++;
-		}
-
 		lan.fila_de_espera--;
-		lan.pcs[i] == EM_USO;
-		
-		sem_wait(&mutex_pcs[i]);
+		int i = verifica_pcs();
+		lan.pcs[i] = EM_USO;
+		//sem_post(&mutex_lan);
 		printf("PC [%d] sendo usado pelo cliente [%d]\n", i + 1, cliente->cliente_id);
 		usleep(10000 * (8 + (rand()%2)));
 		printf("PC [%d] esta livre pelo cliente [%d]\n", i + 1, cliente->cliente_id);
-		sem_post(&mutex_pcs[i]);
-		lan.pcs[i] == LIVRE;
-
-		printf("Cliente [%d] saindo\n", cliente->cliente_id);
+		//sem_wait(&mutex_lan);
+		lan.pcs[i] = LIVRE;
+		//sem_post(&mutex_lan);
+		sem_post(&sem_pcs);
 		
 		return NULL;
 	}
-	
 }
 
 int main(int argc, char *argv[]){
@@ -93,11 +91,11 @@ int main(int argc, char *argv[]){
 
 	lan.fila_de_espera = 0;
 
-	//Inicializacao dos mutexes dos pcs e da lan e das flags dos pcs
+	//Inicializacao das flags dos pcs
 	for (i = 0; i < NUM_PC; i++){
-		sem_init(&mutex_pcs[i], 0, 1);
 		lan.pcs[i] = LIVRE;
 	}
+	sem_init(&sem_pcs, 0, 3);
 	sem_init(&mutex_lan, 0, 1);
 
 	//Criacao das threads dos usuarios
