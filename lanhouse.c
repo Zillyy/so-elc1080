@@ -7,59 +7,62 @@
 #define LIVRE 0
 #define EM_USO 1
 
-//Criacao do semaforo
+//Criacao dos semaforos
 sem_t sem_pcs;
 sem_t mutex_lan;
 
-//Área compartilhada
+//Area compartilhada
 typedef struct{
 	int pcs[NUM_PC];
 	int fila_de_espera;
 } lanhouse;
 lanhouse lan; 
 
+//Struct usada para saber qual o id da thread
 typedef struct{
 	int cliente_id;
 } param_cliente;
 
-//verifica se há pcs disponiveis e retorna o indice do pc desligado ha mais tempo
+//Retorna o indice do pc
 int verifica_pcs(){
 	int i;
 	for(i = 0; i < NUM_PC; i++){
-		if(lan.pcs[i] == LIVRE){
-			return i;
-		}
+		if(lan.pcs[i] == LIVRE) return i;
 	}
 }
 
 void *Lanhouse(void *arg){
 	param_cliente *cliente = arg;
-
-	printf("Cliente [%d] chegando\n", cliente->cliente_id);
-	//sem_wait(&mutex_lan);
-	printf("Sala de espera com %d pessoa(s)\n", lan.fila_de_espera);
-	lan.fila_de_espera++;
-	//sem_post(&mutex_lan);
 	
+	printf("Cliente [%d] chegando\n", cliente->cliente_id);
+	printf("Sala de espera com %d pessoa(s)\n", lan.fila_de_espera);
+	sem_wait(&mutex_lan);
+	lan.fila_de_espera++;
 	if(lan.fila_de_espera > 15){
-		//sem_wait(&mutex_lan);
+		
 		lan.fila_de_espera--;
+		sem_post(&mutex_lan);
 		printf("Cliente [%d] saindo: Sala de espera lotada\n", cliente->cliente_id);
-		//sem_post(&mutex_lan);
 		return NULL;
 	} else{
+		sem_post(&mutex_lan);
+
 		sem_wait(&sem_pcs);
-		//sem_wait(&mutex_lan);
+		
+		sem_wait(&mutex_lan);
 		lan.fila_de_espera--;
 		int i = verifica_pcs();
 		lan.pcs[i] = EM_USO;
-		//sem_post(&mutex_lan);
+		sem_post(&mutex_lan);
+
 		printf("PC [%d] sendo usado pelo cliente [%d]\n", i + 1, cliente->cliente_id);
 		usleep(10000 * (8 + (rand()%2)));
 		printf("PC [%d] esta livre pelo cliente [%d]\n", i + 1, cliente->cliente_id);
-		//sem_wait(&mutex_lan);
+		
+		sem_wait(&mutex_lan);
 		lan.pcs[i] = LIVRE;
-		//sem_post(&mutex_lan);
+		sem_post(&mutex_lan);
+		
 		sem_post(&sem_pcs);
 		
 		return NULL;
@@ -77,6 +80,7 @@ int main(int argc, char *argv[]){
 		exit(-1);
 	}
 
+	//Inicializa RNG
 	srand((unsigned)time(NULL));
 
 	int rc, i;
@@ -89,12 +93,15 @@ int main(int argc, char *argv[]){
 		cliente[i].cliente_id = i + 1;
 	}
 
+	//Inicializa fila de espera com 0 pessoas
 	lan.fila_de_espera = 0;
 
 	//Inicializacao das flags dos pcs
 	for (i = 0; i < NUM_PC; i++){
 		lan.pcs[i] = LIVRE;
 	}
+
+	//Inicializacao dos semaforos
 	sem_init(&sem_pcs, 0, 3);
 	sem_init(&mutex_lan, 0, 1);
 
