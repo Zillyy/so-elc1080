@@ -36,34 +36,34 @@ void *Lanhouse(void *arg){
 	
 	printf("Cliente [%d] chegando\n", cliente->cliente_id);
 	printf("Sala de espera com %d pessoa(s)\n", lan.fila_de_espera);
-	sem_wait(&mutex_lan);
-	lan.fila_de_espera++;
+	sem_wait(&mutex_lan); //Wait lan
+	lan.fila_de_espera++; //Incrementa fila de espera
 	if(lan.fila_de_espera > 15){
-		
+		//Se a fila estiver cheia, manda o cliente embora
 		lan.fila_de_espera--;
 		sem_post(&mutex_lan);
 		printf("Cliente [%d] saindo: Sala de espera lotada\n", cliente->cliente_id);
 		return NULL;
 	} else{
-		sem_post(&mutex_lan);
+		sem_post(&mutex_lan); //Post lan
 
-		sem_wait(&sem_pcs);
+		sem_wait(&sem_pcs); //Wait pcs
 		
-		sem_wait(&mutex_lan);
-		lan.fila_de_espera--;
-		int i = verifica_pcs();
-		lan.pcs[i] = EM_USO;
-		sem_post(&mutex_lan);
+		sem_wait(&mutex_lan); //Wait lan
+		lan.fila_de_espera--; //Tira o cliente da fila de espera
+		int i = verifica_pcs(); //Retorna o indice do pc
+		lan.pcs[i] = EM_USO; //Informa que pc esta sendo usado
+		sem_post(&mutex_lan); //Post lan
 
 		printf("PC [%d] sendo usado pelo cliente [%d]\n", i + 1, cliente->cliente_id);
 		usleep(10000 * (8 + (rand()%2)));
 		printf("PC [%d] esta livre pelo cliente [%d]\n", i + 1, cliente->cliente_id);
 		
-		sem_wait(&mutex_lan);
-		lan.pcs[i] = LIVRE;
-		sem_post(&mutex_lan);
+		sem_wait(&mutex_lan); //Wait lan
+		lan.pcs[i] = LIVRE; //Informa que pc esta livre
+		sem_post(&mutex_lan); //Post lan
 		
-		sem_post(&sem_pcs);
+		sem_post(&sem_pcs); //Post pcs
 		
 		return NULL;
 	}
