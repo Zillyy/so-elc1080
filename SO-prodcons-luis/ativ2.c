@@ -8,6 +8,7 @@
 //Semaforos
 sem_t vazio;
 sem_t cheio;
+sem_t mutex;
 
 //Buffer
 int buffer[MAX_BUFFER];
@@ -42,6 +43,7 @@ void *Produtor(void *arg){
 	printf("Produtor iniciando...\n");
 	while(i < MAX_PRIMOS){
 		sem_wait(&vazio);
+		sem_wait(&mutex);
 		pos_prod = (pos_prod + 1) % MAX_BUFFER; //Proxima posicao de insercao
 		buffer[pos_prod] = fibo; //Insere fibo na posicao pos_prod do buffer
 		if(i > 0){
@@ -51,51 +53,74 @@ void *Produtor(void *arg){
 		}
 		i++;
 		printf("Produzindo item [%d] na posicao: [%d]\n", buffer[pos_prod], pos_prod);
+		sem_post(&mutex);
 		sem_post(&cheio);
 	}
 	printf("Produtor saindo...\n");
 }
 
 void *Consumidor(void *arg){
-	printf("Consumidor iniciando...\n");
-	while(max_cons != 0){
+	printf("[%d] Consumidor iniciando...\n", pthread_self());
+	int loop = 1;
+	while(loop){
 		sem_wait(&cheio);
+		sem_wait(&mutex);
 		pos_cons = (pos_cons + 1) % MAX_BUFFER; //Proxima posicao de consumo
-		printf("Consumindo item [%d] na posicao [%d]\n", buffer[pos_cons], pos_cons);
+		printf("[%d] Consumindo item [%d] na posicao [%d]\n", pthread_self(), buffer[pos_cons], pos_cons);
 		if(VerificaPrimo(buffer[pos_cons])){     //Verifica se eh primo
 			printf("[%d] eh primo!\n", buffer[pos_cons]);
 		}
 		max_cons--;    //Decrementa variavel global
+		if(max_cons == 0) loop = 0;
+		sem_post(&mutex);
 		sem_post(&vazio);
 	}
-	printf("Consumidor saindo...\n");
+	
+	printf("[%d] Consumidor saindo...\n", pthread_self());
 }
 
 int main(int argc, char *argv[]){
+	//Verificacoes de parametros 
+	if(argc != 2){
+		printf("Uso: %s (numero de consumidores)\n", argv[0]);
+		exit(-1);
+	}
+	if(atoi(argv[1]) < 1){
+		printf("O numero de consumidores deve ser maior ou igual a 1!\n");
+		exit(-1);
+	}
+
+	int num_cons = atoi(argv[1]);
+
 	//Threads
-	pthread_t produtor, consumidor;
+	pthread_t produtor, consumidor[num_cons];
 	
 	//Init dos semaforos
 	sem_init(&vazio, 0, MAX_BUFFER);
 	sem_init(&cheio, 0, 0);
+	sem_init(&mutex, 0, 1);
 
-	//Criacao das threads
-	int rc_p, rc_c;
+	//Criacao e verificacao de erros das threads
+	int rc_p, rc_c, i;
 	rc_p = pthread_create(&produtor, NULL, Produtor, NULL);
-	rc_c = pthread_create(&consumidor, NULL, Consumidor, NULL);
-
-	//Verificacao de erros na criacao das threads
 	if (rc_p){                
     	printf("ERRO! Codigo de retorno de pthread_create() eh %d\n", rc_p);                            
     	exit(-1);                          
     }
-    if (rc_c){                
-    	printf("ERRO! Codigo de retorno de pthread_create() eh %d\n", rc_c);                            
-    	exit(-1);                          
+
+    for(i = 0; i < num_cons; i++){
+    	rc_c = pthread_create(&consumidor[i], NULL, Consumidor, NULL);
+	    if (rc_c){                
+	    	printf("ERRO! Codigo de retorno de pthread_create() eh %d\n", rc_c);                            
+	    	exit(-1);                          
+	    }
     }
 
     //Join de threads
 	pthread_join(produtor, NULL);
-	pthread_join(consumidor, NULL);
+	for(i = 0; i < num_cons; i++){
+		pthread_join(consumidor[i], NULL);	
+	}
+	
 	return 0;
 }
