@@ -58,14 +58,14 @@ void *Produtor(void *arg){
 
 void *Consumidor(void *arg){
 	printf("Consumidor iniciando...\n");
-	while(max_cons != 0){
+	while(max_cons > 0){
+		max_cons--; //Decrementa variavel global
 		sem_wait(&cheio);
 		pos_cons = (pos_cons + 1) % MAX_BUFFER; //Proxima posicao de consumo
 		printf("Consumindo item [%d] na posicao [%d]\n", buffer[pos_cons], pos_cons);
 		if(VerificaPrimo(buffer[pos_cons])){     //Verifica se eh primo
 			printf("[%d] eh primo!\n", buffer[pos_cons]);
 		}
-		max_cons--;    //Decrementa variavel global
 		sem_post(&vazio);
 	}
 	printf("Consumidor saindo...\n");
